@@ -1,0 +1,40 @@
+# ============================================================
+# UCF - User Constraints File
+# Project : Top Tally Counter
+# Board   : Xilinx Spartan-3 Starter Kit (XC3S200)
+# ============================================================
+
+# ============================================================
+# CLOCK - 50 MHz oscillator
+# ============================================================
+NET "clk"  LOC = "T9"  | PERIOD = 20ns;
+
+# ============================================================
+# PUSH BUTTONS (Active High)
+# BTN3 = RST (User Reset)
+# BTN1 = btn (tally button input)
+# ============================================================
+NET "rst"  LOC = "L14";
+NET "btn"  LOC = "M14";
+
+# ============================================================
+# 7-SEGMENT DISPLAY SEGMENTS (Active Low)
+# seg7_out = {a, b, c, d, e, f, g}
+# ============================================================
+NET "seg7_out[6]"  LOC = "E14";   # segment a
+NET "seg7_out[5]"  LOC = "G13";   # segment b
+NET "seg7_out[4]"  LOC = "N15";   # segment c
+NET "seg7_out[3]"  LOC = "P15";   # segment d
+NET "seg7_out[2]"  LOC = "R16";   # segment e
+NET "seg7_out[1]"  LOC = "F13";   # segment f
+NET "seg7_out[0]"  LOC = "N16";   # segment g
+NET "dp"           LOC = "P16";   # decimal point - driven HIGH (OFF)
+
+# ============================================================
+# 7-SEGMENT ANODE SELECT (Active Low)
+# seg_sel_out = {AN3, AN2, AN1, AN0}
+# ============================================================
+NET "seg_sel_out[3]"  LOC = "E13";   # AN3 (leftmost  digit - thousands)
+NET "seg_sel_out[2]"  LOC = "F14";   # AN2 (hundreds)
+NET "seg_sel_out[1]"  LOC = "G14";   # AN1 (tens)
+NET "seg_sel_out[0]"  LOC = "D14";   # AN0 (rightmost digit - ones)
