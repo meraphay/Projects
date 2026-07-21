@@ -1,0 +1,4 @@
+node_modules/
+bookme.db
+bookme.db.tmp
+.env

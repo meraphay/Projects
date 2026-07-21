@@ -1,0 +1,8 @@
+node_modules/
+dist/
+bookme.db
+bookme.db.tmp
+.env
+.env.local
+*.log
+.DS_Store
