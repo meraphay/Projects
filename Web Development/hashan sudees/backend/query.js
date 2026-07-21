@@ -46,11 +46,10 @@ function execute(sql, params = []) {
   const db = getDatabase()
   if (!db) return null
   try {
-    db.run(sql, params)
+    const results = db.exec(sql + "; SELECT last_insert_rowid() as id", params)
     saveDb()
-    const result = db.exec("SELECT last_insert_rowid() as id")
-    const id = result[0]?.values[0]?.[0]
-    return id ?? null
+    const idResult = results.find(r => r.columns?.includes('id'))
+    return idResult?.values[0]?.[0] ?? null
   } catch (err) {
     console.error('SQL execute error:', err.message, sql)
     throw err
@@ -61,11 +60,10 @@ function insert(sql, params = []) {
   const db = getDatabase()
   if (!db) return null
   try {
-    db.run(sql, params)
+    const results = db.exec(sql + "; SELECT last_insert_rowid() as id", params)
     saveDb()
-    const result = db.exec("SELECT last_insert_rowid() as id")
-    const id = result[0]?.values[0]?.[0]
-    return id ?? null
+    const idResult = results.find(r => r.columns?.includes('id'))
+    return idResult?.values[0]?.[0] ?? null
   } catch (err) {
     console.error('SQL insert error:', err.message, sql)
     throw err
