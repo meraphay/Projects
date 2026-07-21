@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
     const existing = queryOne("SELECT id FROM users WHERE email = ?", [email.trim().toLowerCase()])
     if (existing) return res.status(409).json({ error: 'Email already registered' })
 
-    const hash = await bcrypt.hash(password, 12)
+    const hash = await bcrypt.hash(password, 8)
     const emailClean = email.trim().toLowerCase()
     execute(
       "INSERT INTO users (name, email, password, phone) VALUES (?, ?, ?, ?)",

@@ -18,16 +18,13 @@ const __dirname = path.dirname(__filename)
 const app = express()
 const PORT = process.env.PORT || 5000
 
-app.use(helmet())
+app.use(helmet({ crossOriginResourcePolicy: false }))
 
-const corsOptions = {
-  origin: process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map(s => s.trim())
-    : ['http://localhost:5173', 'http://localhost:3000'],
+app.use(cors({
+  origin: true,
   credentials: true,
   optionsSuccessStatus: 200
-}
-app.use(cors(corsOptions))
+}))
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
