@@ -10,6 +10,16 @@ export async function seed() {
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     phone TEXT DEFAULT '',
+    verified INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`)
+
+  db.run(`CREATE TABLE IF NOT EXISTS verification_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
   )`)
 

@@ -11,6 +11,7 @@ import Search from './pages/Search'
 import Seats from './pages/Seats'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import VerifyEmail from './pages/VerifyEmail'
 import MyBookings from './pages/MyBookings'
 import NotFound from './pages/NotFound'
 
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/seats/:id" element={<PageWrap><Seats /></PageWrap>} />
           <Route path="/login" element={<PageWrap><Login /></PageWrap>} />
           <Route path="/register" element={<PageWrap><Register /></PageWrap>} />
+          <Route path="/verify-email" element={<PageWrap><VerifyEmail /></PageWrap>} />
           <Route path="/my-bookings" element={<PageWrap><MyBookings /></PageWrap>} />
           <Route path="*" element={<PageWrap><NotFound /></PageWrap>} />
         </Routes>

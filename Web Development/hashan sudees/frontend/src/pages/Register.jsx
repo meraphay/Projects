@@ -19,13 +19,19 @@ export default function Register() {
     setError('')
     if (!form.name || !form.email || !form.password) { setError('All fields are required'); return }
     if (form.password.length < 8) { setError('Password must be at least 8 characters'); return }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(form.password)) { setError('Password must contain at least one special character'); return }
     if (form.password !== form.confirm) { setError('Passwords do not match'); return }
     if (!agree) { setError('You must agree to the terms'); return }
     setLoading(true)
     const result = await register(form.name, form.email, form.password, form.phone)
     if (result.success) {
-      show('Account created!', 'success')
-      navigate('/')
+      if (result.needsVerification) {
+        show('Verification code sent!', 'success')
+        navigate(`/verify-email?email=${encodeURIComponent(result.email)}`)
+      } else {
+        show('Account created!', 'success')
+        navigate('/')
+      }
     } else {
       setError(result.error || 'Registration failed')
     }
@@ -79,7 +85,7 @@ export default function Register() {
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6, display: 'block' }}>Password</label>
             <div style={{ display: 'flex', border: '1px solid var(--border)' }}>
-              <input type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min. 8 characters"
+              <input type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min. 8 chars, 1 special char"
                 style={{ flex: 1, padding: '12px 14px', border: 'none', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: 14, fontWeight: 500 }}
                 onFocusCapture={e => e.target.parentElement.style.borderColor = 'var(--accent)'}
                 onBlurCapture={e => e.target.parentElement.style.borderColor = 'var(--border)'} />

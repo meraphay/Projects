@@ -1,13 +1,21 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
 import { queryAll, queryOne, execute } from '../query.js'
+import { sendVerificationEmail } from '../mail.js'
 
 const router = Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'bookme_secret_key_change_in_production'
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '7d'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const SPECIAL_CHAR_RE = /[!@#$%^&*(),.?":{}|<>]/
+const SKIP_VERIFICATION = process.env.SKIP_EMAIL_VERIFICATION === 'true' || !process.env.EMAIL_USER
+
+function generateCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
 
 router.post('/register', async (req, res) => {
   try {
@@ -25,25 +33,90 @@ router.post('/register', async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' })
     }
+    if (!SPECIAL_CHAR_RE.test(password)) {
+      return res.status(400).json({ error: 'Password must contain at least one special character' })
+    }
 
-    const existing = queryOne("SELECT id FROM users WHERE email = ?", [email.trim().toLowerCase()])
+    const emailClean = email.trim().toLowerCase()
+    const existing = queryOne("SELECT id, verified FROM users WHERE email = ?", [emailClean])
     if (existing) return res.status(409).json({ error: 'Email already registered' })
 
     const hash = await bcrypt.hash(password, 8)
-    const emailClean = email.trim().toLowerCase()
     execute(
-      "INSERT INTO users (name, email, password, phone) VALUES (?, ?, ?, ?)",
-      [name.trim(), emailClean, hash, (phone || '').trim()]
+      "INSERT INTO users (name, email, password, phone, verified) VALUES (?, ?, ?, ?, ?)",
+      [name.trim(), emailClean, hash, (phone || '').trim(), SKIP_VERIFICATION ? 1 : 0]
     )
 
-    const user = queryOne("SELECT id, name, email, phone FROM users WHERE email = ?", [emailClean])
+    const user = queryOne("SELECT id, name, email, phone, verified FROM users WHERE email = ?", [emailClean])
     if (!user) throw new Error('Failed to create user')
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
 
-    res.status(201).json({ token, user })
+    if (SKIP_VERIFICATION) {
+      const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
+      return res.status(201).json({ token, user })
+    }
+
+    const code = generateCode()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
+    await sendVerificationEmail(emailClean, code)
+
+    res.status(201).json({ needsVerification: true, email: emailClean })
   } catch (err) {
     console.error('Register error:', err)
     res.status(500).json({ error: err.message || 'Registration failed' })
+  }
+})
+
+router.post('/send-verification', async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) return res.status(400).json({ error: 'Email is required' })
+
+    const emailClean = email.trim().toLowerCase()
+    const user = queryOne("SELECT id, verified FROM users WHERE email = ?", [emailClean])
+    if (!user) return res.status(404).json({ error: 'User not found' })
+    if (user.verified) return res.status(400).json({ error: 'Email already verified' })
+
+    const code = generateCode()
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
+    await sendVerificationEmail(emailClean, code)
+
+    res.json({ message: 'Verification code sent' })
+  } catch (err) {
+    console.error('Send verification error:', err)
+    res.status(500).json({ error: err.message || 'Failed to send code' })
+  }
+})
+
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body
+    if (!email || !code) return res.status(400).json({ error: 'Email and code are required' })
+
+    const emailClean = email.trim().toLowerCase()
+    const user = queryOne("SELECT id, verified FROM users WHERE email = ?", [emailClean])
+    if (!user) return res.status(404).json({ error: 'User not found' })
+    if (user.verified) {
+      const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
+      return res.json({ token, user, alreadyVerified: true })
+    }
+
+    const valid = queryOne(
+      "SELECT id FROM verification_codes WHERE email = ? AND code = ? AND used = 0 AND expires_at > datetime('now') ORDER BY created_at DESC LIMIT 1",
+      [emailClean, code]
+    )
+    if (!valid) return res.status(400).json({ error: 'Invalid or expired code' })
+
+    execute("UPDATE verification_codes SET used = 1 WHERE id = ?", [valid.id])
+    execute("UPDATE users SET verified = 1 WHERE id = ?", [user.id])
+
+    const updated = queryOne("SELECT id, name, email, phone FROM users WHERE id = ?", [user.id])
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
+    res.json({ token, user: updated })
+  } catch (err) {
+    console.error('Verify email error:', err)
+    res.status(500).json({ error: err.message || 'Verification failed' })
   }
 })
 
@@ -55,11 +128,20 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' })
     }
 
-    const user = queryOne("SELECT id, name, email, password, phone FROM users WHERE email = ?", [email.trim().toLowerCase()])
+    const emailClean = email.trim().toLowerCase()
+    const user = queryOne("SELECT id, name, email, password, phone, verified FROM users WHERE email = ?", [emailClean])
     if (!user) return res.status(401).json({ error: 'Invalid email or password' })
 
     const match = await bcrypt.compare(password, user.password)
     if (!match) return res.status(401).json({ error: 'Invalid email or password' })
+
+    if (!user.verified && !SKIP_VERIFICATION) {
+      const code = generateCode()
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+      execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
+      await sendVerificationEmail(emailClean, code)
+      return res.status(403).json({ needsVerification: true, email: emailClean, message: 'Please verify your email first. A new code has been sent.' })
+    }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, phone: user.phone } })

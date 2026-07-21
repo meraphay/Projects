@@ -20,8 +20,13 @@ export default function Login() {
     setLoading(true)
     const result = await login(form.email, form.password)
     if (result.success) {
-      show('Welcome back!', 'success')
-      navigate('/')
+      if (result.needsVerification) {
+        show('Please verify your email first', 'info')
+        navigate(`/verify-email?email=${encodeURIComponent(result.email)}`)
+      } else {
+        show('Welcome back!', 'success')
+        navigate('/')
+      }
     } else {
       setError(result.error || 'Invalid credentials')
     }
