@@ -11,6 +11,7 @@ import authRoutes from './routes/auth.js'
 import citiesRoutes from './routes/cities.js'
 import busesRoutes from './routes/buses.js'
 import bookingsRoutes from './routes/bookings.js'
+import { getDatabase } from './query.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -52,6 +53,23 @@ app.use('/api/buses', busesRoutes)
 app.use('/api/bookings', bookingsRoutes)
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
+
+app.get('/api/debug/db', (req, res) => {
+  try {
+    const db = getDatabase()
+    if (!db) return res.json({ error: 'no db' })
+    const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+    const userCount = db.exec("SELECT COUNT(*) as c FROM users")
+    const r1 = db.exec("INSERT INTO users (name, email, password) VALUES ('debug', 'debug-' || CAST(random() AS TEXT) || '@test.com', 'password')")
+    const r2 = db.exec("SELECT last_insert_rowid() as id")
+    const r3 = db.exec("INSERT INTO users (name, email, password) VALUES ('debug2', 'debug2-' || CAST(random() AS TEXT) || '@test.com', 'password'); SELECT last_insert_rowid() as id")
+    const r4 = db.run("INSERT INTO users (name, email, password) VALUES ('debug3', 'debug3-' || CAST(random() AS TEXT) || '@test.com', 'password')")
+    const r5 = db.exec("SELECT last_insert_rowid() as id")
+    res.json({ tables, userCount, r1, r2, r3, r4, r5 })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 // Serve frontend build for non-API routes
 const publicDir = path.join(__dirname, 'public')

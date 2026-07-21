@@ -70,4 +70,4 @@ function insert(sql, params = []) {
   }
 }
 
-export { queryAll, queryOne, execute, insert }
+export { queryAll, queryOne, execute, insert, getDatabase }
