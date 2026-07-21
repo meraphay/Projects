@@ -27,7 +27,7 @@ router.get('/search', (req, res) => {
     const offset = (page - 1) * limit
 
     let sql = `
-      SELECT b.id, b.name, b.type, b.departure_time, b.arrival_time, b.duration, b.date, b.fare, b.total_seats,
+      SELECT b.id, b.name as operator_name, b.type as bus_type, b.departure_time, b.arrival_time, b.duration, b.date, b.fare as fare_per_seat, b.total_seats as total_seats,
              dc.name as departure_city, ac.name as arrival_city
       FROM buses b
       JOIN cities dc ON b.departure_city_id = dc.id
@@ -57,6 +57,27 @@ router.get('/search', (req, res) => {
     })
   } catch (err) {
     res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Search failed' : err.message })
+  }
+})
+
+router.get('/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid bus ID' })
+
+    const bus = queryAll(`
+      SELECT b.id, b.name as operator_name, b.type as bus_type, b.departure_time, b.arrival_time, b.duration, b.date, b.fare as fare_per_seat, b.total_seats,
+             dc.name as departure_city, ac.name as arrival_city
+      FROM buses b
+      JOIN cities dc ON b.departure_city_id = dc.id
+      JOIN cities ac ON b.arrival_city_id = ac.id
+      WHERE b.id = ?
+    `, [id])
+
+    if (!bus.length) return res.status(404).json({ error: 'Bus not found' })
+    res.json(bus[0])
+  } catch (err) {
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to load bus' : err.message })
   }
 })
 

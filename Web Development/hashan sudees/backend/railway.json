@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "nixpacks",
-    "buildCommand": "echo 'public/ folder already contains built frontend'"
+    "buildCommand": "npm install"
   },
   "deploy": {
     "startCommand": "node server.js",

@@ -139,7 +139,7 @@ export default function Seats() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           bus_id: id,
-          seat_numbers: selectedSeats.map(s => s.seat_number || s.seatNumber || s.number || s.id),
+          seat_ids: selectedSeats.map(s => s.id),
           total_fare: totalFare,
         }),
       })
