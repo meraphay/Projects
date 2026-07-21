@@ -1,32 +1,42 @@
 import nodemailer from 'nodemailer'
 
 let transporter = null
+let devUrl = null
 
-function getTransporter() {
+async function getTransporter() {
   if (transporter) return transporter
   const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS } = process.env
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    console.warn('Email not configured. Set EMAIL_USER and EMAIL_PASS in .env')
-    return null
+
+  if (EMAIL_USER && EMAIL_PASS) {
+    transporter = nodemailer.createTransport({
+      host: EMAIL_HOST || 'smtp.gmail.com',
+      port: parseInt(EMAIL_PORT) || 587,
+      secure: false,
+      auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+    })
+    await transporter.verify()
+    console.log('Email transporter ready (SMTP)')
+    return transporter
   }
+
+  const testAccount = await nodemailer.createTestAccount()
   transporter = nodemailer.createTransport({
-    host: EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(EMAIL_PORT) || 587,
+    host: 'smtp.ethereal.email',
+    port: 587,
     secure: false,
-    auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+    auth: { user: testAccount.user, pass: testAccount.pass },
   })
+  devUrl = 'https://ethereal.email/login'
+  console.log('Email transporter ready (Ethereal test)')
+  console.log(`View captured emails at ${devUrl} (user: ${testAccount.user})`)
   return transporter
 }
 
 export async function sendVerificationEmail(email, code) {
-  const t = getTransporter()
-  if (!t) {
-    console.log(`[DEV] Verification code for ${email}: ${code}`)
-    return true
-  }
   try {
-    await t.sendMail({
-      from: `"BookMe" <${process.env.EMAIL_USER}>`,
+    const t = await getTransporter()
+    const info = await t.sendMail({
+      from: `"BookMe" <${process.env.EMAIL_USER || 'bookme@ethereal.email'}>`,
       to: email,
       subject: 'Verify your BookMe account',
       html: `
@@ -43,6 +53,12 @@ export async function sendVerificationEmail(email, code) {
         </div>
       `,
     })
+    if (info.messageId) {
+      const previewUrl = nodemailer.getTestMessageUrl(info)
+      if (previewUrl) {
+        console.log(`Verification email preview: ${previewUrl}`)
+      }
+    }
     return true
   } catch (err) {
     console.error('Failed to send email:', err.message)
