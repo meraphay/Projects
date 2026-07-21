@@ -40,7 +40,8 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({ token, user })
   } catch (err) {
-    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Registration failed' : err.message })
+    console.error('Register error:', err)
+    res.status(500).json({ error: err.message || 'Registration failed' })
   }
 })
 
