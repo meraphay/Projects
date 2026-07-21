@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
     const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
     const d = await r.json()
     if (d.token) { setToken(d.token); setUser(d.user); localStorage.setItem('bookme_token', d.token); return { success: true } }
-    if (d.needsVerification) return { success: true, needsVerification: true, email: d.email }
+    if (d.needsVerification) return { success: true, needsVerification: true, email: d.email, devCode: d.devCode }
     return { success: false, error: d.error }
   }
 
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
     const r = await fetch(`${API}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, phone }) })
     const d = await r.json()
     if (d.token) { setToken(d.token); setUser(d.user); localStorage.setItem('bookme_token', d.token); return { success: true } }
-    if (d.needsVerification) return { success: true, needsVerification: true, email: d.email }
+    if (d.needsVerification) return { success: true, needsVerification: true, email: d.email, devCode: d.devCode }
     return { success: false, error: d.error }
   }
 

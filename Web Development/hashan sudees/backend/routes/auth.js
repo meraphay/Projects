@@ -11,7 +11,7 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES || '7d'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SPECIAL_CHAR_RE = /[!@#$%^&*(),.?":{}|<>]/
-const SKIP_VERIFICATION = process.env.SKIP_EMAIL_VERIFICATION === 'true' || !process.env.EMAIL_USER
+const EMAIL_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -43,24 +43,21 @@ router.post('/register', async (req, res) => {
 
     const hash = await bcrypt.hash(password, 8)
     execute(
-      "INSERT INTO users (name, email, password, phone, verified) VALUES (?, ?, ?, ?, ?)",
-      [name.trim(), emailClean, hash, (phone || '').trim(), SKIP_VERIFICATION ? 1 : 0]
+      "INSERT INTO users (name, email, password, phone, verified) VALUES (?, ?, ?, ?, 0)",
+      [name.trim(), emailClean, hash, (phone || '').trim()]
     )
 
-    const user = queryOne("SELECT id, name, email, phone, verified FROM users WHERE email = ?", [emailClean])
+    const user = queryOne("SELECT id, name, email, phone FROM users WHERE email = ?", [emailClean])
     if (!user) throw new Error('Failed to create user')
-
-    if (SKIP_VERIFICATION) {
-      const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
-      return res.status(201).json({ token, user })
-    }
 
     const code = generateCode()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
     execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
     await sendVerificationEmail(emailClean, code)
 
-    res.status(201).json({ needsVerification: true, email: emailClean })
+    const response = { needsVerification: true, email: emailClean }
+    if (!EMAIL_CONFIGURED) response.devCode = code
+    res.status(201).json(response)
   } catch (err) {
     console.error('Register error:', err)
     res.status(500).json({ error: err.message || 'Registration failed' })
@@ -82,7 +79,9 @@ router.post('/send-verification', async (req, res) => {
     execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
     await sendVerificationEmail(emailClean, code)
 
-    res.json({ message: 'Verification code sent' })
+    const response = { message: 'Verification code sent' }
+    if (!EMAIL_CONFIGURED) response.devCode = code
+    res.json(response)
   } catch (err) {
     console.error('Send verification error:', err)
     res.status(500).json({ error: err.message || 'Failed to send code' })
@@ -135,12 +134,14 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.password)
     if (!match) return res.status(401).json({ error: 'Invalid email or password' })
 
-    if (!user.verified && !SKIP_VERIFICATION) {
+    if (!user.verified) {
       const code = generateCode()
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
       execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
       await sendVerificationEmail(emailClean, code)
-      return res.status(403).json({ needsVerification: true, email: emailClean, message: 'Please verify your email first. A new code has been sent.' })
+      const response = { needsVerification: true, email: emailClean, message: 'Please verify your email first. A new code has been sent.' }
+      if (!EMAIL_CONFIGURED) response.devCode = code
+      return res.status(403).json(response)
     }
 
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })

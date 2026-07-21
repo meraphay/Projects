@@ -10,7 +10,9 @@ export default function VerifyEmail() {
   const { show } = useToast()
   const email = searchParams.get('email') || ''
 
-  const [digits, setDigits] = useState(['', '', '', '', '', ''])
+  const initialCode = searchParams.get('code') || ''
+  const initialDigits = initialCode ? initialCode.split('').slice(0, 6) : ['', '', '', '', '', '']
+  const [digits, setDigits] = useState(initialDigits)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resending, setResending] = useState(false)

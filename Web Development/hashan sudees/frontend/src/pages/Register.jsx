@@ -27,7 +27,7 @@ export default function Register() {
     if (result.success) {
       if (result.needsVerification) {
         show('Verification code sent!', 'success')
-        navigate(`/verify-email?email=${encodeURIComponent(result.email)}`)
+        navigate(`/verify-email?email=${encodeURIComponent(result.email)}${result.devCode ? `&code=${result.devCode}` : ''}`)
       } else {
         show('Account created!', 'success')
         navigate('/')
