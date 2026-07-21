@@ -35,6 +35,8 @@ router.post('/register', async (req, res) => {
       [name.trim(), email.trim().toLowerCase(), hash, (phone || '').trim()]
     )
 
+    if (!userId) throw new Error('Failed to create user')
+
     const user = queryOne("SELECT id, name, email, phone FROM users WHERE id = ?", [userId])
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
 
@@ -62,7 +64,8 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, phone: user.phone } })
   } catch (err) {
-    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Login failed' : err.message })
+    console.error('Login error:', err)
+    res.status(500).json({ error: err.message || 'Login failed' })
   }
 })
 
