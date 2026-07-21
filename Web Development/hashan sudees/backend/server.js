@@ -3,12 +3,17 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import { fileURLToPath } from 'url'
+import path from 'path'
 import { getDb, closeDb } from './db.js'
 import { seed } from './seed.js'
 import authRoutes from './routes/auth.js'
 import citiesRoutes from './routes/cities.js'
 import busesRoutes from './routes/buses.js'
 import bookingsRoutes from './routes/bookings.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -49,10 +54,11 @@ app.use('/api/bookings', bookingsRoutes)
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
 // Serve frontend build for non-API routes
-app.use(express.static('public'))
+const publicDir = path.join(__dirname, 'public')
+app.use(express.static(publicDir))
 app.use((req, res, next) => {
   if (req.path.startsWith('/api')) return next()
-  res.sendFile('index.html', { root: 'public' })
+  res.sendFile(path.join(publicDir, 'index.html'))
 })
 
 app.use((err, req, res, _next) => {
