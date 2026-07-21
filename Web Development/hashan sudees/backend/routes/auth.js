@@ -30,14 +30,14 @@ router.post('/register', async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Email already registered' })
 
     const hash = await bcrypt.hash(password, 12)
-    const userId = execute(
+    const emailClean = email.trim().toLowerCase()
+    execute(
       "INSERT INTO users (name, email, password, phone) VALUES (?, ?, ?, ?)",
-      [name.trim(), email.trim().toLowerCase(), hash, (phone || '').trim()]
+      [name.trim(), emailClean, hash, (phone || '').trim()]
     )
 
-    if (!userId) throw new Error('Failed to create user')
-
-    const user = queryOne("SELECT id, name, email, phone FROM users WHERE id = ?", [userId])
+    const user = queryOne("SELECT id, name, email, phone FROM users WHERE email = ?", [emailClean])
+    if (!user) throw new Error('Failed to create user')
     const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES })
 
     res.status(201).json({ token, user })
