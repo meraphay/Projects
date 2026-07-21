@@ -45,7 +45,7 @@ router.post('/', auth, (req, res) => {
       return res.status(400).json({ error: 'Some seats do not exist' })
     }
 
-    const wrongBus = seats.find(s => s.bus_id !== Number(bus_id))
+    const wrongBus = seats.find(s => Number(s.bus_id) !== Number(bus_id))
     if (wrongBus) {
       return res.status(400).json({ error: 'Seats do not belong to this bus' })
     }
@@ -78,6 +78,22 @@ router.post('/', auth, (req, res) => {
   }
 })
 
+function enrichBooking(b) {
+  const seatIds = JSON.parse(b.seat_ids || '[]')
+  let seatRows = []
+  if (seatIds.length > 0) {
+    const placeholders = seatIds.map(() => '?').join(',')
+    seatRows = queryAll(`SELECT seat_number FROM seats WHERE id IN (${placeholders})`, seatIds)
+  }
+  return {
+    ...b,
+    seat_ids: seatIds,
+    seat_numbers: seatRows.map(s => s.seat_number).join(', '),
+    seats: seatRows,
+    created_at: b.booking_date,
+  }
+}
+
 router.get('/', auth, (req, res) => {
   const page = Math.max(1, parseInt(req.query.page) || 1)
   const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20))
@@ -86,11 +102,13 @@ router.get('/', auth, (req, res) => {
   const bookings = queryAll(`
     SELECT bk.id, bk.bus_id, bk.seat_ids, bk.total_fare, bk.booking_date, bk.status,
            b.name as bus_name, b.departure_time, b.arrival_time, b.date, b.type,
-           dc.name as departure_city, ac.name as arrival_city
+           dc.name as departure_city, ac.name as arrival_city,
+           u.name as passenger_name, u.email, u.phone
     FROM bookings bk
     JOIN buses b ON bk.bus_id = b.id
     JOIN cities dc ON b.departure_city_id = dc.id
     JOIN cities ac ON b.arrival_city_id = ac.id
+    JOIN users u ON bk.user_id = u.id
     WHERE bk.user_id = ?
     ORDER BY bk.booking_date DESC
     LIMIT ? OFFSET ?
@@ -100,7 +118,7 @@ router.get('/', auth, (req, res) => {
   const total = countResult?.total || 0
 
   res.json({
-    bookings: bookings.map(b => ({ ...b, seat_ids: JSON.parse(b.seat_ids || '[]') })),
+    bookings: bookings.map(enrichBooking),
     pagination: { page, limit, total, pages: Math.ceil(total / limit) }
   })
 })
@@ -114,11 +132,13 @@ router.get('/my', auth, (req, res) => {
     const bookings = queryAll(`
       SELECT bk.id, bk.bus_id, bk.seat_ids, bk.total_fare, bk.booking_date, bk.status,
              b.name as bus_name, b.departure_time, b.arrival_time, b.date, b.type,
-             dc.name as departure_city, ac.name as arrival_city
+             dc.name as departure_city, ac.name as arrival_city,
+             u.name as passenger_name, u.email, u.phone
       FROM bookings bk
       JOIN buses b ON bk.bus_id = b.id
       JOIN cities dc ON b.departure_city_id = dc.id
       JOIN cities ac ON b.arrival_city_id = ac.id
+      JOIN users u ON bk.user_id = u.id
       WHERE bk.user_id = ?
       ORDER BY bk.booking_date DESC
       LIMIT ? OFFSET ?
@@ -128,11 +148,33 @@ router.get('/my', auth, (req, res) => {
     const total = countResult?.total || 0
 
     res.json({
-      bookings: bookings.map(b => ({ ...b, seat_ids: JSON.parse(b.seat_ids || '[]') })),
+      bookings: bookings.map(enrichBooking),
       pagination: { page, limit, total, pages: Math.ceil(total / limit) }
     })
   } catch (err) {
     res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to fetch bookings' : err.message })
+  }
+})
+
+router.post('/:id/cancel', auth, (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking ID' })
+
+    const booking = queryOne("SELECT id, user_id, status, seat_ids FROM bookings WHERE id = ?", [id])
+    if (!booking) return res.status(404).json({ error: 'Booking not found' })
+    if (booking.user_id !== req.user.id) return res.status(403).json({ error: 'Unauthorized' })
+    if (booking.status !== 'confirmed') return res.status(400).json({ error: 'Booking cannot be cancelled' })
+
+    const seatIds = JSON.parse(booking.seat_ids || '[]')
+    for (const sid of seatIds) {
+      execute("UPDATE seats SET is_booked = 0 WHERE id = ?", [sid])
+    }
+    execute("UPDATE bookings SET status = 'cancelled' WHERE id = ?", [id])
+
+    res.json({ success: true, message: 'Booking cancelled successfully' })
+  } catch (err) {
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Cancellation failed' : err.message })
   }
 })
 

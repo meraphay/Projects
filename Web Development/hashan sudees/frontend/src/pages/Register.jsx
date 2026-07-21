@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
 
 export default function Register() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', phone: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPwd, setShowPwd] = useState(false)
@@ -18,11 +18,11 @@ export default function Register() {
     e.preventDefault()
     setError('')
     if (!form.name || !form.email || !form.password) { setError('All fields are required'); return }
-    if (form.password.length < 6) { setError('Password must be at least 6 characters'); return }
+    if (form.password.length < 8) { setError('Password must be at least 8 characters'); return }
     if (form.password !== form.confirm) { setError('Passwords do not match'); return }
     if (!agree) { setError('You must agree to the terms'); return }
     setLoading(true)
-    const result = await register(form.name, form.email, form.password)
+    const result = await register(form.name, form.email, form.password, form.phone)
     if (result.success) {
       show('Account created!', 'success')
       navigate('/')
@@ -69,9 +69,17 @@ export default function Register() {
           </div>
 
           <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6, display: 'block' }}>Phone (optional)</label>
+            <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="03XX-XXXXXXX"
+              style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--border)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: 14, fontWeight: 500 }}
+              onFocusCapture={e => e.target.style.borderColor = 'var(--accent)'}
+              onBlurCapture={e => e.target.style.borderColor = 'var(--border)'} />
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6, display: 'block' }}>Password</label>
             <div style={{ display: 'flex', border: '1px solid var(--border)' }}>
-              <input type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min. 6 characters"
+              <input type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Min. 8 characters"
                 style={{ flex: 1, padding: '12px 14px', border: 'none', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: 14, fontWeight: 500 }}
                 onFocusCapture={e => e.target.parentElement.style.borderColor = 'var(--accent)'}
                 onBlurCapture={e => e.target.parentElement.style.borderColor = 'var(--border)'} />

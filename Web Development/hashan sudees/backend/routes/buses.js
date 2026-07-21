@@ -1,7 +1,14 @@
 import { Router } from 'express'
-import { queryAll } from '../query.js'
+import { queryAll, queryOne } from '../query.js'
 
 const router = Router()
+
+function resolveCityId(value) {
+  const id = parseInt(value)
+  if (!isNaN(id) && id > 0) return id
+  const row = queryOne("SELECT id FROM cities WHERE LOWER(name) = LOWER(?)", [value])
+  return row ? row.id : null
+}
 
 router.get('/search', (req, res) => {
   try {
@@ -11,10 +18,10 @@ router.get('/search', (req, res) => {
       return res.status(400).json({ error: 'Please select departure and arrival cities' })
     }
 
-    const fromId = parseInt(from)
-    const toId = parseInt(to)
+    const fromId = resolveCityId(from)
+    const toId = resolveCityId(to)
 
-    if (isNaN(fromId) || isNaN(toId)) {
+    if (!fromId || !toId) {
       return res.status(400).json({ error: 'Invalid city selection' })
     }
 
@@ -27,7 +34,8 @@ router.get('/search', (req, res) => {
     const offset = (page - 1) * limit
 
     let sql = `
-      SELECT b.id, b.name as operator_name, b.type as bus_type, b.departure_time, b.arrival_time, b.duration, b.date, b.fare as fare_per_seat, b.total_seats as total_seats,
+      SELECT b.id, b.name as operator_name, b.type as bus_type, b.departure_time, b.arrival_time, b.duration, b.date, b.fare as fare_per_seat, b.total_seats,
+             (b.total_seats - (SELECT COUNT(*) FROM seats WHERE bus_id = b.id AND is_booked = 1)) as available_seats,
              dc.name as departure_city, ac.name as arrival_city
       FROM buses b
       JOIN cities dc ON b.departure_city_id = dc.id

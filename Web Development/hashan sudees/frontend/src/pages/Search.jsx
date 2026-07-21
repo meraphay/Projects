@@ -75,7 +75,7 @@ function BusCard({ bus }) {
         </span>
         {bus.duration && (
           <span style={{ fontSize: 12, color: 'var(--text-secondary)', border: '1px solid var(--border)', padding: '4px 10px' }}>
-            {bus.duration}h
+            {bus.duration}
           </span>
         )}
       </div>

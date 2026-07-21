@@ -47,8 +47,8 @@ function execute(sql, params = []) {
   if (!db) return null
   try {
     db.run(sql, params)
-    saveDb()
     const result = db.exec("SELECT last_insert_rowid() as id")
+    saveDb()
     return result?.[0]?.values?.[0]?.[0] ?? null
   } catch (err) {
     console.error('SQL execute error:', err.message, sql)
@@ -56,18 +56,6 @@ function execute(sql, params = []) {
   }
 }
 
-function insert(sql, params = []) {
-  const db = getDatabase()
-  if (!db) return null
-  try {
-    db.run(sql, params)
-    saveDb()
-    const result = db.exec("SELECT last_insert_rowid() as id")
-    return result?.[0]?.values?.[0]?.[0] ?? null
-  } catch (err) {
-    console.error('SQL insert error:', err.message, sql)
-    throw err
-  }
-}
+const insert = execute
 
 export { queryAll, queryOne, execute, insert }

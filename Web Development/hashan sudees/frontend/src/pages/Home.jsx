@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, useAnimation, useInView, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 
-const cities = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan', 'Peshawar', 'Quetta', 'Sialkot', 'Hyderabad', 'Gujranwala', 'Sukkur']
+const cities = ['Islamabad', 'Lahore', 'Karachi', 'Rawalpindi', 'Faisalabad', 'Multan', 'Peshawar', 'Quetta', 'Sialkot', 'Gujranwala']
 
 function RevealText({ children, as = 'h1', delay = 0, className, style }) {
   const ref = useRef(null)
