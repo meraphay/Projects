@@ -116,6 +116,12 @@ export default function VerifyEmail() {
           </div>
         )}
 
+        {initialCode && (
+          <div style={{ padding: '12px 16px', border: '1px solid rgba(255,77,77,0.3)', marginBottom: 20, fontSize: 13, color: '#ff4d4d', fontWeight: 600, background: 'rgba(255,77,77,0.05)' }}>
+            Dev code: {initialCode} — auto-filled below
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 32 }} onPaste={handlePaste}>
           {digits.map((d, i) => (
             <input

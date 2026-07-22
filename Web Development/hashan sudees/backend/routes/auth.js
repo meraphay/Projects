@@ -11,7 +11,7 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES || '7d'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SPECIAL_CHAR_RE = /[!@#$%^&*(),.?":{}|<>]/
-const EMAIL_CONFIGURED = !!process.env.RESEND_API_KEY
+const EMAIL_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -53,10 +53,10 @@ router.post('/register', async (req, res) => {
     const code = generateCode()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
     execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
-    await sendVerificationEmail(emailClean, code)
+    const sent = await sendVerificationEmail(emailClean, code)
 
     const response = { needsVerification: true, email: emailClean }
-    if (!EMAIL_CONFIGURED) response.devCode = code
+    if (!sent || !EMAIL_CONFIGURED) response.devCode = code
     res.status(201).json(response)
   } catch (err) {
     console.error('Register error:', err)
@@ -77,10 +77,10 @@ router.post('/send-verification', async (req, res) => {
     const code = generateCode()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
     execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
-    await sendVerificationEmail(emailClean, code)
+    const sent = await sendVerificationEmail(emailClean, code)
 
     const response = { message: 'Verification code sent' }
-    if (!EMAIL_CONFIGURED) response.devCode = code
+    if (!sent || !EMAIL_CONFIGURED) response.devCode = code
     res.json(response)
   } catch (err) {
     console.error('Send verification error:', err)
@@ -138,9 +138,9 @@ router.post('/login', async (req, res) => {
       const code = generateCode()
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
       execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
-      await sendVerificationEmail(emailClean, code)
+      const sent = await sendVerificationEmail(emailClean, code)
       const response = { needsVerification: true, email: emailClean, message: 'Please verify your email first. A new code has been sent.' }
-      if (!EMAIL_CONFIGURED) response.devCode = code
+      if (!sent || !EMAIL_CONFIGURED) response.devCode = code
       return res.status(403).json(response)
     }
 
