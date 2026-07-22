@@ -21,8 +21,9 @@ export default function Login() {
     const result = await login(form.email, form.password)
     if (result.success) {
       if (result.needsVerification) {
-        show('Please verify your email first', 'info')
-        navigate(`/verify-email?email=${encodeURIComponent(result.email)}`)
+        const msg = result.devCode ? `Dev code: ${result.devCode}` : 'Please verify your email first'
+        show(msg, 'info')
+        navigate(`/verify-email?email=${encodeURIComponent(result.email)}${result.devCode ? `&code=${result.devCode}` : ''}`)
       } else {
         show('Welcome back!', 'success')
         navigate('/')
