@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  async function fetchWithTimeout(path, opts, timeout = 15000) {
+  async function fetchWithTimeout(path, opts, timeout = 30000) {
     const controller = new AbortController()
     const id = setTimeout(() => controller.abort(), timeout)
     try {
