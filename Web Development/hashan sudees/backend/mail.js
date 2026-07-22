@@ -1,28 +1,15 @@
-import nodemailer from 'nodemailer'
-import dns from 'dns'
+import { Resend } from 'resend'
 
-dns.setDefaultResultOrder('ipv4first')
-
-let transporter = null
+let resend = null
 
 export async function sendVerificationEmail(email, code) {
-  const { EMAIL_USER, EMAIL_PASS } = process.env
+  const key = process.env.RESEND_API_KEY
 
-  if (EMAIL_USER && EMAIL_PASS) {
-    if (!transporter) {
-      transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
-        auth: { user: EMAIL_USER, pass: EMAIL_PASS },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-      })
-    }
+  if (key) {
+    if (!resend) resend = new Resend(key)
     try {
-      const info = await transporter.sendMail({
-        from: `"BookMe" <${EMAIL_USER}>`,
+      const { error } = await resend.emails.send({
+        from: 'BookMe <onboarding@resend.dev>',
         to: email,
         subject: 'Verify your BookMe account',
         html: `
@@ -37,12 +24,15 @@ export async function sendVerificationEmail(email, code) {
           </div>
         `,
       })
-      console.log(`Email sent to ${email}: ${info.messageId}`)
+      if (error) {
+        console.error('Resend error:', error)
+        return { error: error.message || 'Resend failed' }
+      }
+      console.log(`Email sent to ${email}`)
       return true
     } catch (err) {
-      const msg = `${err.code || ''} ${err.responseCode || ''} ${err.message}`.trim()
-      console.error('Email send failed:', msg)
-      return { error: msg }
+      console.error('Email failed:', err.message)
+      return { error: err.message }
     }
   }
 
