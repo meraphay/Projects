@@ -11,7 +11,7 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES || '7d'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SPECIAL_CHAR_RE = /[!@#$%^&*(),.?":{}|<>]/
-const EMAIL_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
+const EMAIL_CONFIGURED = !!process.env.SENDGRID_API_KEY
 
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString()
