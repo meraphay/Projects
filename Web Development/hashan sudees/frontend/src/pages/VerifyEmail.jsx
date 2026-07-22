@@ -10,9 +10,7 @@ export default function VerifyEmail() {
   const { show } = useToast()
   const email = searchParams.get('email') || ''
 
-  const initialCode = searchParams.get('code') || ''
-  const initialDigits = initialCode ? initialCode.split('').slice(0, 6) : ['', '', '', '', '', '']
-  const [digits, setDigits] = useState(initialDigits)
+  const [digits, setDigits] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resending, setResending] = useState(false)
@@ -113,12 +111,6 @@ export default function VerifyEmail() {
         {error && (
           <div style={{ padding: '12px 16px', border: '1px solid #ff4757', marginBottom: 20, fontSize: 13, color: '#ff4757', fontWeight: 500 }}>
             {error}
-          </div>
-        )}
-
-        {initialCode && (
-          <div style={{ padding: '12px 16px', border: '1px solid rgba(255,77,77,0.3)', marginBottom: 20, fontSize: 13, color: '#ff4d4d', fontWeight: 600, background: 'rgba(255,77,77,0.05)' }}>
-            Dev code: {initialCode} — auto-filled below
           </div>
         )}
 

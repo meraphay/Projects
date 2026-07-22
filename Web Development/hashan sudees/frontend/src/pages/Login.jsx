@@ -22,7 +22,7 @@ export default function Login() {
     if (result.success) {
       if (result.needsVerification) {
         show('Please verify your email first', 'info')
-        navigate(`/verify-email?email=${encodeURIComponent(result.email)}${result.devCode ? `&code=${result.devCode}` : ''}`)
+        navigate(`/verify-email?email=${encodeURIComponent(result.email)}`)
       } else {
         show('Welcome back!', 'success')
         navigate('/')

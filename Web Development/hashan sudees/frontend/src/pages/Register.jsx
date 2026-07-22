@@ -26,9 +26,8 @@ export default function Register() {
     const result = await register(form.name, form.email, form.password, form.phone)
     if (result.success) {
       if (result.needsVerification) {
-        const msg = result.devCode ? `Code: ${result.devCode}` : 'Check your email for the code'
-        show(msg, 'info')
-        navigate(`/verify-email?email=${encodeURIComponent(result.email)}${result.devCode ? `&code=${result.devCode}` : ''}`)
+        show('Verification code sent to your email', 'success')
+        navigate(`/verify-email?email=${encodeURIComponent(result.email)}`)
       } else {
         show('Account created!', 'success')
         navigate('/')

@@ -12,6 +12,7 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES || '7d'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SPECIAL_CHAR_RE = /[!@#$%^&*(),.?":{}|<>]/
 const EMAIL_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
+console.log(`Email configured: ${EMAIL_CONFIGURED ? 'yes' : 'no — set EMAIL_USER and EMAIL_PASS on Railway'}`)
 
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -55,9 +56,13 @@ router.post('/register', async (req, res) => {
     execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
     const sent = await sendVerificationEmail(emailClean, code)
 
-    const response = { needsVerification: true, email: emailClean }
-    if (!sent || !EMAIL_CONFIGURED) response.devCode = code
-    res.status(201).json(response)
+    if (!sent && EMAIL_CONFIGURED) {
+      return res.status(500).json({ error: 'Failed to send verification email. Check EMAIL_USER/EMAIL_PASS on Railway.' })
+    }
+    if (!EMAIL_CONFIGURED) {
+      return res.status(201).json({ needsVerification: true, email: emailClean, devCode: code })
+    }
+    res.status(201).json({ needsVerification: true, email: emailClean })
   } catch (err) {
     console.error('Register error:', err)
     res.status(500).json({ error: err.message || 'Registration failed' })
@@ -79,9 +84,10 @@ router.post('/send-verification', async (req, res) => {
     execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
     const sent = await sendVerificationEmail(emailClean, code)
 
-    const response = { message: 'Verification code sent' }
-    if (!sent || !EMAIL_CONFIGURED) response.devCode = code
-    res.json(response)
+    if (!sent && EMAIL_CONFIGURED) {
+      return res.status(500).json({ error: 'Failed to send verification email' })
+    }
+    res.json({ message: 'Verification code sent' })
   } catch (err) {
     console.error('Send verification error:', err)
     res.status(500).json({ error: err.message || 'Failed to send code' })
@@ -139,8 +145,10 @@ router.post('/login', async (req, res) => {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
       execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
       const sent = await sendVerificationEmail(emailClean, code)
+      if (!sent && EMAIL_CONFIGURED) {
+        return res.status(500).json({ error: 'Failed to send verification email' })
+      }
       const response = { needsVerification: true, email: emailClean, message: 'Please verify your email first. A new code has been sent.' }
-      if (!sent || !EMAIL_CONFIGURED) response.devCode = code
       return res.status(403).json(response)
     }
 
