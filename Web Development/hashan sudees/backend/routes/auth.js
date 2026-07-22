@@ -11,8 +11,8 @@ const JWT_EXPIRES = process.env.JWT_EXPIRES || '7d'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SPECIAL_CHAR_RE = /[!@#$%^&*(),.?":{}|<>]/
-const EMAIL_CONFIGURED = !!(process.env.RESEND_API_KEY)
-console.log(`Email configured: ${EMAIL_CONFIGURED ? 'yes' : 'no — set RESEND_API_KEY on Railway'}`)
+const EMAIL_CONFIGURED = !!(process.env.SMTP2GO_API_KEY && process.env.SMTP2GO_SENDER)
+console.log(`Email configured: ${EMAIL_CONFIGURED ? 'yes' : 'no — set SMTP2GO_API_KEY + SMTP2GO_SENDER on Railway'}`)
 
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString()
