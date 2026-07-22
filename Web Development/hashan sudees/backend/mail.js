@@ -1,4 +1,7 @@
 import nodemailer from 'nodemailer'
+import dns from 'dns'
+
+dns.setDefaultResultOrder('ipv4first')
 
 let transporter = null
 
@@ -9,12 +12,12 @@ export async function sendVerificationEmail(email, code) {
     if (!transporter) {
       transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
+        port: 587,
+        secure: false,
         auth: { user: EMAIL_USER, pass: EMAIL_PASS },
         connectionTimeout: 10000,
         greetingTimeout: 10000,
-        socketTimeout: 10000,
+        socketTimeout: 15000,
       })
     }
     try {
