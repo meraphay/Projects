@@ -54,12 +54,12 @@ router.post('/register', async (req, res) => {
     const code = generateCode()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
     execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
-    const sent = await sendVerificationEmail(emailClean, code)
+    const result = await sendVerificationEmail(emailClean, code)
 
-    if (!sent && EMAIL_CONFIGURED) {
-      return res.status(500).json({ error: 'Failed to send verification email. Check EMAIL_USER/EMAIL_PASS on Railway.' })
+    if (result && result.error) {
+      return res.status(500).json({ error: `Email failed: ${result.error}` })
     }
-    if (!EMAIL_CONFIGURED) {
+    if (result && result.dev) {
       return res.status(201).json({ needsVerification: true, email: emailClean, devCode: code })
     }
     res.status(201).json({ needsVerification: true, email: emailClean })
@@ -82,10 +82,10 @@ router.post('/send-verification', async (req, res) => {
     const code = generateCode()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
     execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
-    const sent = await sendVerificationEmail(emailClean, code)
+    const result = await sendVerificationEmail(emailClean, code)
 
-    if (!sent && EMAIL_CONFIGURED) {
-      return res.status(500).json({ error: 'Failed to send verification email' })
+    if (result && result.error) {
+      return res.status(500).json({ error: `Email failed: ${result.error}` })
     }
     res.json({ message: 'Verification code sent' })
   } catch (err) {
@@ -144,9 +144,9 @@ router.post('/login', async (req, res) => {
       const code = generateCode()
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
       execute("INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, ?)", [emailClean, code, expiresAt])
-      const sent = await sendVerificationEmail(emailClean, code)
-      if (!sent && EMAIL_CONFIGURED) {
-        return res.status(500).json({ error: 'Failed to send verification email' })
+      const result = await sendVerificationEmail(emailClean, code)
+      if (result && result.error) {
+        return res.status(500).json({ error: `Email failed: ${result.error}` })
       }
       const response = { needsVerification: true, email: emailClean, message: 'Please verify your email first. A new code has been sent.' }
       return res.status(403).json(response)
