@@ -1,10 +1,11 @@
-import sgMail from '@sendgrid/mail'
+import { Resend } from 'resend'
 
-const SENDGRID_KEY = process.env.SENDGRID_API_KEY
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@bookme.pk'
+const API_KEY = process.env.RESEND_API_KEY
+const FROM_EMAIL = process.env.FROM_EMAIL || 'BookMe <noreply@bookme.pk>'
+let resend = null
 
-if (SENDGRID_KEY) {
-  sgMail.setApiKey(SENDGRID_KEY)
+if (API_KEY) {
+  resend = new Resend(API_KEY)
 }
 
 export async function sendVerificationEmail(email, code) {
@@ -22,22 +23,26 @@ export async function sendVerificationEmail(email, code) {
     </div>
   `
 
-  if (!SENDGRID_KEY) {
+  if (!resend) {
     console.log(`[DEV] Verification code for ${email}: ${code}`)
     return true
   }
 
   try {
-    await sgMail.send({
-      to: email,
+    const { error } = await resend.emails.send({
       from: FROM_EMAIL,
+      to: email,
       subject: 'Verify your BookMe account',
       html,
     })
+    if (error) {
+      console.error('Resend error:', error)
+      return false
+    }
     console.log(`Verification email sent to ${email}`)
     return true
   } catch (err) {
-    console.error('Failed to send email:', err.response?.body || err.message)
+    console.error('Failed to send email:', err.message)
     return false
   }
 }
