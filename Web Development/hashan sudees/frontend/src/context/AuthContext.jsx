@@ -21,17 +21,29 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  async function fetchWithTimeout(path, opts, timeout = 15000) {
+    const controller = new AbortController()
+    const id = setTimeout(() => controller.abort(), timeout)
+    try {
+      const r = await fetch(`${API}${path}`, { ...opts, signal: controller.signal })
+      clearTimeout(id)
+      return await r.json()
+    } catch (err) {
+      clearTimeout(id)
+      if (err.name === 'AbortError') return { error: 'Request timed out' }
+      return { error: 'Network error' }
+    }
+  }
+
   const login = async (email, password) => {
-    const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
-    const d = await r.json()
+    const d = await fetchWithTimeout('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
     if (d.token) { setToken(d.token); setUser(d.user); localStorage.setItem('bookme_token', d.token); return { success: true } }
     if (d.needsVerification) return { success: true, needsVerification: true, email: d.email, devCode: d.devCode }
     return { success: false, error: d.error }
   }
 
   const register = async (name, email, password, phone) => {
-    const r = await fetch(`${API}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, phone }) })
-    const d = await r.json()
+    const d = await fetchWithTimeout('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, phone }) })
     if (d.token) { setToken(d.token); setUser(d.user); localStorage.setItem('bookme_token', d.token); return { success: true } }
     if (d.needsVerification) return { success: true, needsVerification: true, email: d.email, devCode: d.devCode }
     return { success: false, error: d.error }
